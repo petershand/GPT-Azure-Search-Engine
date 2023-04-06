@@ -186,8 +186,10 @@ def model_tokens_limit(model: str) -> int:
     """Returns the number of tokens limits in a text model."""
     if model == "gpt-35-turbo":
         token_limit = 3000
-    if model == "gpt-4":
+    elif model == "gpt-4":
         token_limit = 7000
-    if model == "gpt-4-32k":
+    elif model == "gpt-4-32k":
         token_limit = 31000
+    else:
+        token_limit = 3000
     return token_limit
