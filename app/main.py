@@ -13,7 +13,9 @@ from utils import (
     embed_docs,
     get_answer,
     get_sources,
-    search_docs
+    search_docs,
+    num_tokens_from_string,
+    model_tokens_limit
 )
 from credentials import (
     DATASOURCE_CONNECTION_STRING,
@@ -32,7 +34,8 @@ os.environ["OPENAI_API_BASE"] = os.environ["AZURE_OPENAI_ENDPOINT"] = st.session
 os.environ["OPENAI_API_KEY"] = os.environ["AZURE_OPENAI_API_KEY"] = st.session_state["AZURE_OPENAI_API_KEY"] = AZURE_OPENAI_KEY
 os.environ["OPENAI_API_VERSION"] = os.environ["AZURE_OPENAI_API_VERSION"] = AZURE_OPENAI_API_VERSION
 
-
+# setting encoding for GPT3.5 / GPT4 models
+encoding_name ='cl100k_base'
 
 def clear_submit():
     st.session_state["submit"] = False
@@ -156,14 +159,22 @@ if qbutton or bbutton or st.session_state.get("submit"):
                 
             if "add_text" in locals():
                 with st.spinner(add_text):
-                    if(len(docs)>1):
-                        language = random.choice(list(file_content.items()))[1]["language"]
-                        index = embed_docs(docs, language)
-                        sources = search_docs(index,query)
-                        if qbutton:
-                            answer = get_answer(sources, query, deployment="gpt-35-turbo", chain_type = "stuff", temperature=temp, max_tokens=256)
-                        if bbutton: 
-                            answer = get_answer(sources, query, deployment="gpt-35-turbo", chain_type = "map_reduce", temperature=temp, max_tokens=500)
+                    if(len(docs)>0):
+                        gpt_tokens_limit = model_tokens_limit('gpt-35-turbo')
+                        num_token = 0
+                        for i in range(len(docs)):
+                              num_token += num_tokens_from_string(docs[i].page_content)
+                        # if the token count >3000 then we are not doing the embedding.
+                        if num_token > gpt_tokens_limit:
+                            language = random.choice(list(file_content.items()))[1]["language"]
+                            index = embed_docs(docs, language)
+                            sources = search_docs(index,query)
+                            if qbutton:
+                                answer = get_answer(sources, query, deployment="gpt-35-turbo", chain_type = "stuff", temperature=temp, max_tokens=256)
+                            if bbutton: 
+                                answer = get_answer(sources, query, deployment="gpt-35-turbo", chain_type = "map_reduce", temperature=temp, max_tokens=500)
+                        else:
+                            answer = get_answer(docs, query, deployment="gpt-35-turbo", chain_type = "stuff", temperature=temp, max_tokens=256)
 
                     else:
                         answer = {"output_text":"No results found" }
